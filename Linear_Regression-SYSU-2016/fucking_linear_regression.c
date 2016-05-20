@@ -8,23 +8,22 @@
 #define BUF_SIZE 100000
 #define LEARNING_RATE 0.003
 
-double training_data[M][MAX_J];
+double feature[M][MAX_J];
 double reference[M];
 double sita[MAX_J];
 
-void read_training_data() {
-    int i, j;
-    double id;
+void read_feature() {
+    int i, j, id;
     for (i = 0; i < M; i++)
-        training_data[i][0] = 1;
+        feature[i][0] = 1;
     FILE *train_data = fopen("./train.csv", "r");
     char *unuse_line = (char*)malloc(sizeof(char) * BUF_SIZE);
     fgets(unuse_line, BUF_SIZE, train_data);
     free(unuse_line);
     for (i = 0; i < M; i++) {
-        fscanf(train_data, "%lf,", &id);
+        fscanf(train_data, "%d,", &id);
         for (j = 1; j < MAX_J; j++)
-            fscanf(train_data, "%lf,", &training_data[i][j]);
+            fscanf(train_data, "%lf,", &feature[i][j]);
         fscanf(train_data, "%lf\n", &reference[i]);
     }
 }
@@ -33,16 +32,16 @@ void feature_scaling() {
     int i, j;
     double max, min, average;
     for (j = 1; j < MAX_J; j++) {
-        max = min = average = training_data[0][j];
+        max = min = average = feature[0][j];
         for (i = 1; i < M; i++) {
-            if (training_data[i][j] > max)
-                max = training_data[i][j];
-            if (training_data[i][j] < min)
-                min = training_data[i][j];
-            average += training_data[i][j] / (double)M;
+            if (feature[i][j] > max)
+                max = feature[i][j];
+            if (feature[i][j] < min)
+                min = feature[i][j];
+            average += feature[i][j] / (double)M;
         }
         for (i = 0; i < M; i++)
-            training_data[i][j] = (max - min < 1e-7) ? 0 : (training_data[i][j] - average) / (max - min);
+            feature[i][j] = (max - min < 1e-7) ? 0 : (feature[i][j] - average) / (max - min);
     }
 }
 
@@ -52,7 +51,7 @@ double cost_func() {
     for (i = 0; i < M; i++) {
         h = 0;
         for (j = 0; j < MAX_J; j++)
-            h += sita[j] * training_data[i][j];
+            h += sita[j] * feature[i][j];
         cost += pow(h - reference[i], 2);
     }
     return cost;
@@ -69,24 +68,41 @@ void train() {
         for (i = 0; i < M; i++) {
             h = 0;
             for (k = 0; k < MAX_J; k++)
-                h += sita[k] * training_data[i][k];
+                h += sita[k] * feature[i][k];
             factor = h - reference[i];
             for (j = 0; j < MAX_J; j++) {
-                sum = factor * training_data[i][j];
+                sum = factor * feature[i][j];
                 sita[j] -= LEARNING_RATE * (1 / (double)M) * sum;
             }
         }
     }
 }
 
-void predict_with_test_data() {
+void predict_with_training_factor() {
+    int i, j, id;
+    double predict_value;
+    FILE *test_data = fopen("./test.csv", "r");
+    char *unuse_line = (char*)malloc(sizeof(char) * BUF_SIZE);
+    fgets(unuse_line, BUF_SIZE, test_data);
+    free(unuse_line);
+    FILE *predict_data = fopen("./predict.csv", "w+");
+    fprintf(predict_data, "Id,reference\n");
+    for (i = 0; i < M; i++) {
+        fscanf(test_data, "%d,", &id);
+        for (j = 1; j < MAX_J; j++)
+            fscanf(test_data, "%lf,", &feature[i][j]);
+        predict_value = 0;
+        for (j = 0; j < MAX_J; j++)
+            predict_value += sita[j] * feature[i][j];
+        fprintf(predict_data, "%d,%lf\n", id, predict_value);
+    }
 }
 
 int main() {
-    read_training_data();
+    read_feature();
     feature_scaling();
     train();
-    predict_with_test_data();
+    predict_with_training_factor();
     return 0;
 }
 
