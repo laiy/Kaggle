@@ -91,10 +91,13 @@ void predict_with_training_factor() {
         fscanf(test_data, "%d,", &id);
         for (j = 1; j < MAX_J; j++)
             fscanf(test_data, "%lf,", &feature[i][j]);
+    }
+    feature_scaling();
+    for (i = 0; i < M; i++) {
         predict_value = 0;
         for (j = 0; j < MAX_J; j++)
             predict_value += sita[j] * feature[i][j];
-        fprintf(predict_data, "%d,%lf\n", id, predict_value);
+        fprintf(predict_data, "%d,%lf\n", i, predict_value);
     }
 }
 
