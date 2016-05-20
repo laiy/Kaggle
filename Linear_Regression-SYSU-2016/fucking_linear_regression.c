@@ -26,6 +26,7 @@ void read_feature() {
             fscanf(train_data, "%lf,", &feature[i][j]);
         fscanf(train_data, "%lf\n", &reference[i]);
     }
+    fclose(train_data);
 }
 
 void feature_scaling() {
@@ -99,6 +100,8 @@ void predict_with_training_factor() {
             predict_value += sita[j] * feature[i][j];
         fprintf(predict_data, "%d,%lf\n", i, predict_value);
     }
+    fclose(test_data);
+    fclose(predict_data);
 }
 
 int main() {
