@@ -6,7 +6,7 @@
 #define M 25000
 #define MAX_J 385
 #define BUF_SIZE 100000
-#define LEARNING_RATE 0.003
+#define LEARNING_RATE 10
 
 double feature[M][MAX_J];
 double reference[M];
@@ -61,7 +61,7 @@ double cost_func() {
 void train() {
     memset(sita, 0, sizeof(sita));
     double pre_cost = cost_func() + 1;
-    double cost, sum, h, factor;
+    double cost, h, factor;
     int i, j, k;
     while ((cost = cost_func()) < pre_cost) {
         pre_cost = cost;
@@ -71,10 +71,8 @@ void train() {
             for (k = 0; k < MAX_J; k++)
                 h += sita[k] * feature[i][k];
             factor = h - reference[i];
-            for (j = 0; j < MAX_J; j++) {
-                sum = factor * feature[i][j];
-                sita[j] -= LEARNING_RATE * (1 / (double)M) * sum;
-            }
+            for (j = 0; j < MAX_J; j++)
+                sita[j] -= LEARNING_RATE * (1 / (double)M) * factor * feature[i][j];
         }
     }
 }
@@ -90,10 +88,11 @@ void predict_with_training_factor() {
     fprintf(predict_data, "Id,reference\n");
     for (i = 0; i < M; i++) {
         fscanf(test_data, "%d,", &id);
-        for (j = 1; j < MAX_J; j++)
+        for (j = 1; j < MAX_J - 1; j++)
             fscanf(test_data, "%lf,", &feature[i][j]);
+        fscanf(test_data, "%lf\n", &feature[i][j]);
     }
-    feature_scaling();
+    /* feature_scaling(); */
     for (i = 0; i < M; i++) {
         predict_value = 0;
         for (j = 0; j < MAX_J; j++)
@@ -106,7 +105,7 @@ void predict_with_training_factor() {
 
 int main() {
     read_feature();
-    feature_scaling();
+    /* feature_scaling(); */
     train();
     predict_with_training_factor();
     return 0;
