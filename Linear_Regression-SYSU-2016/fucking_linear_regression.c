@@ -31,23 +31,6 @@ void read_feature() {
     fclose(train_data);
 }
 
-void feature_scaling() {
-    int i, j;
-    double max, min, average;
-    for (j = 1; j < MAX_J; j++) {
-        max = min = average = feature[0][j];
-        for (i = 1; i < M; i++) {
-            if (feature[i][j] > max)
-                max = feature[i][j];
-            if (feature[i][j] < min)
-                min = feature[i][j];
-            average += feature[i][j] / (double)M;
-        }
-        for (i = 0; i < M; i++)
-            feature[i][j] = (max - min < 1e-7) ? 0 : (feature[i][j] - average) / (max - min);
-    }
-}
-
 double cost_func() {
     double cost = 0, h;
     int i, j;
@@ -94,7 +77,6 @@ void predict_with_training_factor() {
             fscanf(test_data, "%lf,", &feature[i][j]);
         fscanf(test_data, "%lf\n", &feature[i][j]);
     }
-    /* feature_scaling(); */
     for (i = 0; i < M; i++) {
         predict_value = 0;
         for (j = 0; j < MAX_J; j++)
@@ -114,7 +96,6 @@ static void handler(int signo) {
 
 int main() {
     read_feature();
-    /* feature_scaling(); */
     signal(SIGINT, handler);
     train();
     predict_with_training_factor();
