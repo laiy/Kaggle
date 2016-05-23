@@ -2,11 +2,13 @@
 #include <malloc.h>
 #include <string.h>
 #include <math.h>
+#include <signal.h>
+#include <stdlib.h>
 
 #define M 25000
 #define MAX_J 385
 #define BUF_SIZE 100000
-#define LEARNING_RATE 10
+#define LEARNING_RATE 0.1
 
 double feature[M][MAX_J];
 double reference[M];
@@ -103,9 +105,17 @@ void predict_with_training_factor() {
     fclose(predict_data);
 }
 
+static void handler(int signo) {
+    printf("signal %d handling...\n", signo);
+    predict_with_training_factor();
+    printf("done.\n");
+    exit(0);
+}
+
 int main() {
     read_feature();
     /* feature_scaling(); */
+    signal(SIGINT, handler);
     train();
     predict_with_training_factor();
     return 0;
