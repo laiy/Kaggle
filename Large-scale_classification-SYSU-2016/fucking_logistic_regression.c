@@ -4,15 +4,22 @@
 #include <math.h>
 #include <signal.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 
-#define M 300000
+#define M 40000
 #define MAX_J 3183
-#define LEARNING_RATE 0.0005
+#define LEARNING_RATE 0.01
+#define MAX_BUF 10000
+#define MAX_TRAINING_TIME 20
+#define PROGRESS_NUM 50
 
 bool feature[M][MAX_J];
 bool reference[M];
 double sita[MAX_J];
 short feature_map[12000];
+int piece;
 
 void pre_handle_data() {
     memset(feature_map, -1, sizeof(feature_map));
@@ -28,7 +35,26 @@ void pre_handle_data() {
         }
     }
     fclose(test_data);
-    printf("max feature count: %d\n", --feature_count);
+    printf("max feature count: %d.\n", --feature_count);
+}
+
+void cut_training_data() {
+    FILE *train_data = fopen("./train.txt", "r");
+    int pieces = PROGRESS_NUM, count;
+    const char *pre_path = "./train";
+    char path[20], readline[MAX_BUF];
+    while (pieces--) {
+        count = M;
+        snprintf(path, sizeof(path), "%s%d.txt", pre_path, pieces);
+        FILE *part_data = fopen(path, "w+");
+        while (count--) {
+            fgets(readline, MAX_BUF, train_data);
+            fputs(readline, part_data);
+        }
+        fclose(part_data);
+    }
+    fclose(train_data);
+    printf("data cut.\n");
 }
 
 void read_feature() {
@@ -37,7 +63,12 @@ void read_feature() {
     memset(feature, false, sizeof(feature));
     for (i = 0; i < M; i++)
         feature[i][0] = 1;
-    FILE *train_data = fopen("./train.txt", "r");
+    char path[20];
+    snprintf(path, sizeof(path), "./train%d.txt", piece);
+    /* snprintf(path, sizeof(path), "./sample_submission.csv"); */
+    FILE *train_data = fopen(path, "r");
+    /* while (true) */
+        /* printf("pid: %d, piece: %d\n", getpid(), piece); */
     for (i = 0; i < M; i++) {
         fscanf(train_data, "%d", &r);
         reference[i] = r;
@@ -49,6 +80,7 @@ void read_feature() {
         }
     }
     fclose(train_data);
+    printf("pid: %d, train data read: %s\n", getpid(), path);
 }
 
 inline double sigmoid(double f) {
@@ -72,10 +104,10 @@ void train() {
     memset(sita, 0, sizeof(sita));
     double pre_cost = cost_func() + 1;
     double cost, h, factor;
-    int i, j, k;
-    while ((cost = cost_func()) < pre_cost) {
+    int i, j, k, count = 0;
+    while ((cost = cost_func()) < pre_cost && count++ < MAX_TRAINING_TIME) {
         pre_cost = cost;
-        printf("cost: %lf\n", cost);
+        printf("pid: %d, cost: %lf\n", getpid(), cost);
         for (i = 0; i < M; i++) {
             h = 0;
             for (k = 0; k < MAX_J; k++)
@@ -93,8 +125,10 @@ void predict_with_training_factor() {
     int j, id, f;
     double predict_value;
     char c;
+    char path[20];
     FILE *test_data = fopen("./test.txt", "r");
-    FILE *predict_data = fopen("./predict.csv", "w+");
+    snprintf(path, sizeof(path), "./predict%d.csv", piece);
+    FILE *predict_data = fopen(path, "w+");
     fprintf(predict_data, "id,label\n");
     while (fscanf(test_data, "%d", &id) != EOF) {
         memset(predict_feature, 0, sizeof(predict_feature));
@@ -111,17 +145,34 @@ void predict_with_training_factor() {
     }
     fclose(test_data);
     fclose(predict_data);
+    printf("pid: %d, predicted: %s\n", getpid(), path);
 }
 
 static void handler(int signo) {
-    printf("signal %d handling...\n", signo);
+    printf("pid: %d, signal %d handling...\n", getpid(), signo);
     predict_with_training_factor();
-    printf("done.\n");
+    printf("pid: %d, done.\n", getpid());
     exit(0);
 }
 
 int main() {
     pre_handle_data();
+    cut_training_data();
+    pid_t pid;
+    for (int i = 0; i < PROGRESS_NUM; i++) {
+        if ((pid = fork()) == 0) {
+            piece = i;
+            break;
+        } else if (i == PROGRESS_NUM - 1) {
+            int status;
+            for (i = 0; i < PROGRESS_NUM; i++) {
+                pid = wait(&status);
+                printf("the return code is %d.\n", WEXITSTATUS(status));
+            }
+            exit(0);
+        }
+    }
+    printf("pid: %d, piece: %d\n", getpid(), piece);
     read_feature();
     signal(SIGINT, handler);
     train();
