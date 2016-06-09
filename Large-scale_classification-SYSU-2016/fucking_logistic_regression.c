@@ -10,10 +10,10 @@
 
 #define M 40000
 #define MAX_J 3183
-#define LEARNING_RATE 0.01
+#define LEARNING_RATE 0.0007
 #define MAX_BUF 10000
-#define MAX_TRAINING_TIME 100
-#define PROGRESS_NUM 15
+#define MAX_TRAINING_TIME 1000
+#define PROGRESS_NUM 19
 #define TEST_SIZE 220245
 
 bool feature[M][MAX_J];
@@ -66,10 +66,7 @@ void read_feature() {
         feature[i][0] = 1;
     char path[20];
     snprintf(path, sizeof(path), "./train%d.txt", piece);
-    /* snprintf(path, sizeof(path), "./sample_submission.csv"); */
     FILE *train_data = fopen(path, "r");
-    /* while (true) */
-        /* printf("pid: %d, piece: %d\n", getpid(), piece); */
     for (i = 0; i < M; i++) {
         fscanf(train_data, "%d", &r);
         reference[i] = r;
@@ -185,6 +182,7 @@ int main() {
             piece = i;
             break;
         } else if (i == PROGRESS_NUM - 1) {
+            signal(SIGINT, SIG_IGN);
             int status;
             for (i = 0; i < PROGRESS_NUM; i++) {
                 pid = wait(&status);
