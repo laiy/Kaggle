@@ -12,8 +12,9 @@
 #define MAX_J 3183
 #define LEARNING_RATE 0.01
 #define MAX_BUF 10000
-#define MAX_TRAINING_TIME 20
-#define PROGRESS_NUM 50
+#define MAX_TRAINING_TIME 100
+#define PROGRESS_NUM 15
+#define TEST_SIZE 220245
 
 bool feature[M][MAX_J];
 bool reference[M];
@@ -129,7 +130,6 @@ void predict_with_training_factor() {
     FILE *test_data = fopen("./test.txt", "r");
     snprintf(path, sizeof(path), "./predict%d.csv", piece);
     FILE *predict_data = fopen(path, "w+");
-    fprintf(predict_data, "id,label\n");
     while (fscanf(test_data, "%d", &id) != EOF) {
         memset(predict_feature, 0, sizeof(predict_feature));
         predict_feature[0] = 1;
@@ -155,6 +155,27 @@ static void handler(int signo) {
     exit(0);
 }
 
+void vote_for_final_prediction() {
+    char path[20];
+    int id, prediction;
+    short votes[TEST_SIZE];
+    memset(votes, 0, sizeof(votes));
+    for (int i = 0; i < PROGRESS_NUM; i++) {
+        snprintf(path, sizeof(path), "./predict%d.csv", piece);
+        FILE *predict_data = fopen(path, "r");
+        while (fscanf(predict_data, "%d,%d\n", &id, &prediction) != EOF)
+            votes[id] += prediction;
+        fclose(predict_data);
+    }
+    FILE *final_predict_data = fopen("./predict.csv", "w+");
+    fprintf(final_predict_data, "id,label\n");
+    for (int i = 0; i < TEST_SIZE; i++) {
+        fprintf(final_predict_data, "%d,%d\n", i, votes[i] > PROGRESS_NUM / 2 ? 1 : 0);
+    }
+    fclose(final_predict_data);
+    printf("vote over, result in ./predict.csv\n");
+}
+
 int main() {
     pre_handle_data();
     cut_training_data();
@@ -169,6 +190,8 @@ int main() {
                 pid = wait(&status);
                 printf("the return code is %d.\n", WEXITSTATUS(status));
             }
+            printf("all child process done, now voting the final result due to all results predicted by child process.\n");
+            vote_for_final_prediction();
             exit(0);
         }
     }
