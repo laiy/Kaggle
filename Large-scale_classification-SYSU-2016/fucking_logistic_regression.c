@@ -10,10 +10,10 @@
 
 #define M 40000
 #define MAX_J 3183
-#define LEARNING_RATE 0.0007
+#define LEARNING_RATE 0.0001
 #define MAX_BUF 10000
-#define MAX_TRAINING_TIME 1000
-#define PROGRESS_NUM 19
+#define MAX_TRAINING_TIME 3000
+#define PROGRESS_NUM 21
 #define TEST_SIZE 220245
 
 bool feature[M][MAX_J];
